@@ -1,4 +1,5 @@
 /* global Phaser */
+import { createAnimations } from './animations.js' // Importa las animaciones
 
 const config = {
     type: Phaser.AUTO,
@@ -39,6 +40,11 @@ function preload () {
         'assets//entities//mario.png',
         { frameWidth: 18, frameHeight: 16}
     )
+
+    this.load.audio(
+        'game-over',
+        'assets//sound//music//gameover.mp3'
+    )
 } // 1.
 
 function create () {
@@ -65,25 +71,10 @@ function create () {
     this.physics.world.setBounds(0, 0, 2000, config.height) // Establece los límites del mundo
     this.physics.add.collider(this.mario, this.floor)
 
-    this.anims.create({
-        key: 'mario-walk', // <------ Id de la animación
-        frames: this.anims.generateFrameNumbers(
-		'mario',
-		{ start: 0, end: 3 }
-		),
-        frameRate: 12, // Velocidad de la animación
-        repeat: -1 // Repetir indefinidamente
-    })
+    this.cameras.main.setBounds(0, 0, 2000, config.height) // Establece los límites de la cámara
+    this.cameras.main.startFollow(this.mario) // La cámara sigue al sprite de Mario 
 
-    this.anims.create({
-        key: 'mario-idle', // <------ Id de la animación
-        frames: [{ key: 'mario', frame: 0 }], // Solo un frame
-    })
-
-    this.anims.create({
-        key: 'mario-jump', // <------ Id de la animación
-        frames: [{ key: 'mario', frame: 5 }], // Solo un frame
-    })
+    createAnimations(this) // Crea las animaciones
 
     this.keys = this.input.keyboard.createCursorKeys()    
 
@@ -91,6 +82,9 @@ function create () {
 } // 2.
 
 function update () {
+
+    if (this.mario.isDead) return // Si Mario está muerto, no actualiza más
+
     if (this.keys.left.isDown) {
         this.mario.x -= 2
         this.mario.anims.play('mario-walk', true) // Reproduce la animación de caminar
@@ -108,5 +102,20 @@ function update () {
     if (this.keys.up.isDown && this.mario.body.touching.down) {
         this.mario.setVelocityY(-300)
         this.mario.anims.play('mario-jump', true) // Reproduce la animación de salto
+    }
+
+    if (this.mario.y >= config.height) {
+        this.mario.isDead = true // Marca a Mario como muerto
+        this.mario.anims.play('mario-dead', true) // Reproduce la animación de muerte
+        this.mario.setCollideWorldBounds(false) // Desactiva la colisión con los límites del mundo
+        this.sound.add('game-over', { volume: 0.2}).play() // Reproduce el sonido de game over
+
+        setTimeout(() => {
+            this.mario.setVelocityY(-350) // Detiene el movimiento vertical
+        }, 100)
+
+        setTimeout(() => {
+            this.scene.restart() // Reinicia la escena después de 1 segundo
+        }, 2000)
     }
 } // 3. 
