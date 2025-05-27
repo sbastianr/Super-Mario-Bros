@@ -6,6 +6,13 @@ const config = {
     height: 244,
     backgroundColor: '#049cd8',
     parent: 'game',
+    physics:{
+        default: 'arcade', // Motor de física
+        arcade: {
+            gravity: { y: 300 }, // Gravedad en el eje Y
+            debug: false // Muestra información de depuración
+        }   
+    },
     scene: {
         preload, // Se ejecuta para precargar recursos
         create, // Se ejecuta cuando el juego comienza
@@ -32,28 +39,51 @@ function preload () {
         'assets//entities//mario.png',
         { frameWidth: 18, frameHeight: 16}
     )
-
-    this.anims.create({
-        key: 'mario-walk',
-        frames: this.anims.generateFrameNumers(
-            'mario', // <------ Id
-            { start: 1, end: 3 }    
-        ),
-        repeat: -1, // -1 significa que se repite indefinidamente    
-    })
-
 } // 1.
 
 function create () {
     this.add.image(100, 50, 'cloud1')
-    .setOrigin(0,0)
-    .setScale(0.15)
+        .setOrigin(0,0)
+        .setScale(0.15)
 
-    this.add.tileSprite(0, config.height, config.width, 32, 'floorbricks')
+    this.floor = this.physics.add.staticGroup() // Grupo estático para el suelo
+    this.floor
+        .create(0, config.height - 16, 'floorbricks') // Crea el suelo 
+        .setOrigin(0, 0.5) // Establece el origen en la esquina inferior izquierda
+        .refreshBody()
+
+    this.floor
+        .create(150, config.height - 16, 'floorbricks') // Crea el suelo 
+        .setOrigin(0, 0.5) // Establece el origen en la esquina inferior izquierda
+        .refreshBody()
+    
+    this.mario = this.physics.add.sprite(50, 100, 'mario')
         .setOrigin(0, 1)
+        .setCollideWorldBounds(true)
+        .setGravityY(300)
 
-    this.mario = this.add.sprite(50, 210, 'mario')
-    .setOrigin(0, 1)
+    this.physics.world.setBounds(0, 0, 2000, config.height) // Establece los límites del mundo
+    this.physics.add.collider(this.mario, this.floor)
+
+    this.anims.create({
+        key: 'mario-walk', // <------ Id de la animación
+        frames: this.anims.generateFrameNumbers(
+		'mario',
+		{ start: 0, end: 3 }
+		),
+        frameRate: 12, // Velocidad de la animación
+        repeat: -1 // Repetir indefinidamente
+    })
+
+    this.anims.create({
+        key: 'mario-idle', // <------ Id de la animación
+        frames: [{ key: 'mario', frame: 0 }], // Solo un frame
+    })
+
+    this.anims.create({
+        key: 'mario-jump', // <------ Id de la animación
+        frames: [{ key: 'mario', frame: 5 }], // Solo un frame
+    })
 
     this.keys = this.input.keyboard.createCursorKeys()    
 
@@ -63,8 +93,20 @@ function create () {
 function update () {
     if (this.keys.left.isDown) {
         this.mario.x -= 2
+        this.mario.anims.play('mario-walk', true) // Reproduce la animación de caminar
+        this.mario.flipX = true // Voltea el sprite para que mire a la izquierda
+
     } else if (this.keys.right.isDown) {
         this.mario.x += 2
-    }  
+        this.mario.anims.play('mario-walk', true) // Reproduce la animación de caminar
+        this.mario.flipX = false // Asegura que el sprite mire a la derecha
 
+    } else {
+        this.mario.anims.play('mario-idle', true) // Reproduce la animación de estar quieto
+    }
+
+    if (this.keys.up.isDown && this.mario.body.touching.down) {
+        this.mario.setVelocityY(-300)
+        this.mario.anims.play('mario-jump', true) // Reproduce la animación de salto
+    }
 } // 3. 
